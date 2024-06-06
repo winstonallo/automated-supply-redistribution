@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container text-center" style="color: rgb(236, 0, 139)">
+    <!-- go back to the search form -->
+    <div class="row pt-3 d-flex justify-content-start">
+        <div>
+            <a href="{% url 'orders' %}" class="btn btn-light mb-3" style="background-color: #EC008B; color: #fff;">
+                Back to search
+            </a>
+        </div>
+    </div> 
+    <div class="row">
+        <div class="col-6">
+            <h2>Incoming Orders</h2>
+            
+            <div class="accordion">
+
+            {% for store_id, orders in incoming_orders.items %}
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="collapseOrdersHeader{{ forloop.counter }}">
+                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOrders{{ forloop.counter }}" aria-expanded="false" aria-controls="collapseOrders{{ forloop.counter }}">
+                        Source Store: {{ store_id }}
+                    </button>
+                </h2>
+                <div class="accordion-collapse collapse" id="collapseOrders{{ forloop.counter }}" aria-labelledby="collapseOrdersHeader{{ forloop.counter }}">
+                    <div class="accordion-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Received</th>
+                                    <th>Item ID</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                    {% for item in order.items %}
+                                    <tr>
+                                        <td>
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input class="form-check-input" type="checkbox" value="" id="checkOrder{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                                                <label class="form-check-label" for="checkOrder{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"></label>
+                                            </div>
+                                        </td>
+                                        <td>{{ item.item_id }}</td>
+                                        <td>{{ item.amount }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="4">No incoming orders found for this store.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table> <!-- TODO -->
+                        <button type="button" class="btn btn-light mb-3" style="background-color: #EC008B; color: #fff;">Mark as completed</button>
+
+                        </div> <!-- class="accordion-body" -->
+                    </div> <!-- class="accordion-collapse collapse show" -->
+                </div> <!-- class="accordion-item" -->
+                {% empty %}
+                    <p>No incoming orders found.</p>
+                {% endfor %}
+            </div> <!-- class="accordion" -->
+        </div> <!-- class="col-6" -->
+
+        <div class="col-6">
+            <div class="accordion">
+                <h2>Outgoing Orders</h2>
+                {% for store_id, orders in outgoing_orders.items %}
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="outgoingOrdersHeader{{ forloop.counter }}">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#outgoingOrders{{ forloop.counter }}" aria-expanded="false" aria-controls="outgoingOrders{{ forloop.counter }}">
+                            Destination Store: {{ store_id }}
+                        </button>
+                    </h2>
+                    <div id="outgoingOrders{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="outgoingOrdersHeader{{ forloop.counter }}">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Sent</th>
+                                    <th>Item ID</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                    {% for item in order.items %}
+                                        <tr>
+                                            <td>
+                                                <div class="form-check d-flex justify-content-center">
+                                                    <input class="form-check-input" type="checkbox" value="" id="checkOrder{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}">
+                                                    <label class="form-check-label" for="checkOrder{{ forloop.parentloop.parentloop.counter }}-{{ forloop.parentloop.counter }}-{{ forloop.counter }}"></label>
+                                                </div>
+                                            </td>
+                                            <td>{{ item.item_id }}</td>
+                                            <td>{{ item.amount }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                {% empty %}
+                                    <tr>
+                                        <td colspan="4">No outgoing orders found for this store.</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <button type="button" class="btn btn-light mb-3" style="background-color: #EC008B; color: #fff;">Mark as completed</button>
+                    </div>
+                </div> <!-- class="accordion-item" -->
+                {% empty %}
+                    <p>No outgoing orders found.</p>
+                {% endfor %}
+            </div> <!-- class="accordion" -->
+        </div> <!-- class="col-6" -->
+    </div>
+</div>
+<style>
+    .form-check-input:checked {
+        background-color: rgb(236, 0, 139);
+        border-color: rgb(236, 0, 139);
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+
+{% block content %}
+  <h1>Inventory Stock Distribution state for all stores before the distribution</h1>
+    <ul>
+        <li><span style="color:rgba(139, 0, 0, 0.3)">■</span> Number of goods in the shop stock < Min Required number of goods</li>
+        <li><span style="color:rgba(255, 99, 132, 0.3)">■</span> Number of goods in the shop stock < Number of goods in demand</li>
+        <li><span style="color:rgba(75, 192, 192, 0.3)">■</span> Number of goods in the shop stock >= Number of goods in demand</li>
+    </ul>
+  <canvas id="myChart"></canvas>
+  <script>
+    var ctx = document.getElementById('myChart').getContext('2d');
+    ctx.height = 400;
+    ctx.width = 400;
+
+    // Get inventory data from template context
+    var storeIds = {{ inventory_data.store_id }};
+    var storeStocks = {{ inventory_data.store_stock }};
+    var storeMrs = {{ inventory_data.store_mrs }};
+    var storeDemands = {{ inventory_data.store_demand }};
+
+    // Function to generate color based on stock and demand
+    function getColor(stock, demand, minReq) {
+        if (stock < minReq) {
+            return 'rgba(139, 0, 0, 0.3)'; // Dark Red
+        } else if (stock < demand) {
+            return 'rgba(255, 99, 132, 0.3)'; // Red
+        } else {
+            return 'rgba(75, 192, 192, 0.3)'; // Green
+        }
+    }
+
+    var myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: storeIds,
+            datasets: [{
+                label: 'Stock status',
+                data: storeStocks,
+                backgroundColor: storeStocks.map((stock, i) => getColor(storeStocks[i], storeDemands[i], storeMrs[i])),
+                borderColor: storeStocks.map((stock, i) => getColor(storeStocks[i], storeDemands[i], storeMrs[i])),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantity'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Store ID'
+                    }
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}

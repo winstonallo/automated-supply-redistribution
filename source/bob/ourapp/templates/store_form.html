@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+  <div class="card col-6">
+  <div class="container text-center">
+    <h1>Enter Store ID</h1>
+    <form method="post">
+      {% csrf_token %}
+      <div class="mb-3">
+        <div class="col-auto">
+          {{ form.store_id.label_tag }}
+          {{ form.store_id }}
+          {% if form.store_id.errors %}
+          <div class="alert alert-danger">
+            {{ form.store_id.errors }}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn mb-3" style="background-color: #EC008B; color: #fff;">Submit</button>
+      </div>
+    </form>
+  </div>
+  </div>
+{% endblock %}

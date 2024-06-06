@@ -1,0 +1,158 @@
+---
+title: "maps"
+author: "Ruslan Basyrov"
+date: "6/4/2024"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, error = FALSE, warning = FALSE)
+```
+
+```{r}
+# Loading necessary libraries
+library(leaflet)     # For creating interactive maps
+library(sf)          # Support for simple features, a standard to encode spatial data
+library(tidyverse)   # An opinionated collection of R packages designed for data science
+library(data.table)  # Provides an enhanced version of data.frames
+library(stringr)     # String operations
+library(mapview)     # Quickly visualizing spatial data
+library(webshot)     # For taking screenshots of web pages or parts of it, such as maps
+```
+
+```{r}
+# Reading data from a CSV file where data fields are separated by a semicolon
+stores = read.delim("stores.csv", sep=";")
+
+# Renaming columns of the data frame to more readable names
+colnames(stores) = c("Store Number", "Sales Area Number", "Federal State", "Warehouse", "area", "x", "y")
+
+# Cleaning and converting coordinate and area data from strings to numeric, replacing commas with dots
+stores$x = str_replace(stores$x, ",", ".") |> 
+    as.numeric()
+stores$y = str_replace(stores$y, ",", ".") |> 
+    as.numeric()
+stores$area = str_replace(stores$area, ",", ".") |> 
+    as.numeric()
+```
+
+```{r}
+# Imputing missing data in the 'area' column with the mean of the column
+stores[nrow(stores), "area"] = mean(stores$area, na.rm = TRUE)
+
+# Converting the data frame to a spatial data frame using longitude and latitude
+df_sf <- st_as_sf(stores, coords = c("x", "y"), crs = 4326) # Assuming WGS84 (EPSG:4326)
+
+# Placeholder for API token for Jawg map tiles
+api_token = # add your own jawg api token from https://www.jawg.io/lab/
+
+# Creating an interactive Leaflet map with initial view and zoom level, adding a tile layer from Jawg
+map_before = leaflet(df_sf)  %>%
+  setView(lng = 13.5, lat = 47.6, zoom = 7)%>% 
+   addProviderTiles(providers$Jawg.Light,
+                    providerTileOptions(accessToken=api_json))%>%
+  addTiles(paste('https://tile.jawg.io/jawg-light/{z}/{x}/{y}{r}.png?access-token=', api_token, sep = '')) %>%  # Add base map tiles
+  addCircleMarkers(radius = stores$area / max(stores$area) * 8,
+                   color = "#EC008B")   # Add markers for each coordinate, scaled by 'area'
+```
+
+```{r}
+# Another dataset is read, likely for further analysis or visualizations
+result = read.delim("result.csv", sep=";")
+```
+
+```{r}
+# Creating a gradient color function from green to red
+library(RColorBrewer)
+colfunc <- colorRampPalette(c("green", "red"), space = "rgb")
+n_colors = 50
+gradient = c(colfunc(n_colors), rep("#FF0000", 50))
+```
+
+```{r}
+# Aggregating data by 'Store' and calculating mean absolute values of 'Before' and 'After'
+aggregated_result = result |> 
+    dplyr::group_by(Store) |> 
+    summarise(Before = mean(abs(Before)),
+           After = mean(abs(After)))
+aggregated_result = aggregated_result[1:572, ]
+aggregated_result$Store = as.numeric(aggregated_result$Store)
+```
+
+```{r}
+# Joining the aggregated results back to the original stores dataset, then calculating colors based on 'Before' and 'After' values
+stores_with_colors = stores |> 
+    inner_join(aggregated_result, by = c("Store Number" = "Store")) |> 
+    mutate(Before = Before,
+           After = After)
+stores_with_colors = stores_with_colors|> 
+    mutate(ColorBefore = gradient[(Before / max(stores_with_colors$Before) / 0.01) %/% 1],
+           ColorAfter = gradient[(After / max(stores_with_colors$Before) / 0.01) %/% 1])
+```
+
+```{r}
+# Converting to spatial data frame again for mapping
+df_sf <- st_as_sf(stores_with_colors, coords = c("x", "y"), crs = 4326) # Assuming WGS84 (EPSG:4326)
+```
+
+```{r}
+# Map settings for display
+width = 1200
+height = 720
+zoom = 7.49
+radius = 7.5
+```
+
+```{r}
+# Creating an interactive Leaflet map 'before' changes, specifying the map's dimensions and control options
+map_before = leaflet(df_sf,
+                     height=height,
+                     width=width,
+                     options = leafletOptions(zoomControl = TRUE,  # Enables zoom control
+                                 zoomSnap = 0.25,                   # Granularity of zoom levels
+                                 zoomDelta = 1))  %>%
+  setView(lng = 13.5, lat = 47.6, zoom = zoom) %>%  # Set initial map center and zoom level
+   addProviderTiles(providers$Jawg.Light,  # Adding Jawg map tiles for a light-themed map
+                    providerTileOptions(accessToken=api_token))%>%
+  addTiles(paste('https://tile.jawg.io/jawg-light/{z}/{x}/{y}{r}.png?access-token=', api_token, sep = '')) %>%  # Add base map tiles
+  addCircleMarkers(radius = radius,
+                   color = stores_with_colors$ColorBefore) |>   # Add circle markers colored based on the 'Before' scenario
+     addLegend("bottomright",  # Adding a legend in the bottom-right corner
+               colors = gradient[c(1, 12, 25, 37, 100)],  # Gradient colors for the legend
+               labels = c("0", "1", "2", "3", "4+"))  # Labels for the legend
+
+map_before  # Display the 'before' map
+```
+
+```{r eval=FALSE}
+# Saving the 'before' map as both a PNG image and a self-contained HTML file
+mapshot(map_before, file = "map_before.png")  # Saving the map as a PNG file for offline use
+saveWidget(map_before, file="map_before.html", selfcontained = TRUE)  # Saving the map as a HTML file for web use
+```
+
+```{r}
+# Creating an interactive Leaflet map 'after' changes, reusing settings from the 'before' map
+map_after = leaflet(df_sf, 
+                     height=height,
+                     width=width,
+                     options = leafletOptions(zoomControl = TRUE,  # Enable zoom control
+                                 zoomSnap = 0.25,                   # Granularity of zoom levels
+                                 zoomDelta = 1)) %>%
+  setView(lng = 13.5, lat = 47.6, zoom = zoom) %>%  # Set initial map center and zoom level
+   addProvider.Tile(
+                    providerTileOptions(accessToken=api_token)) %>%
+  addTiles(paste('https://tile.jawg.io/jawg-light/{z}/{x}/{y}{r}.png?access-token=', api_token, sep = '')) %>%  # Add base map tiles
+  addCircleMarkers(radius = radius,
+                   color = stores_with_colors$ColorAfter) |>   # Add circle markers colored based on the 'After' scenario
+     addLegend("bottomright",  # Adding a legend in the bottom-right corner
+               colors = gradient[c(1, 12, 25, 37, 100)],  # Gradient colors for the li
+               rds = c("0", "1", "2", "3", "4+"))  # l in
+
+map_after  # Display the 'after' map
+```
+
+# Saving the 'after' map as both a PNG image and a self-contained HTML file
+```{r eval=FALSE}
+mapshot(map_after, file = "map_after.png")  # Saving the map as a PNG file for offline use
+saveWidget(map_after, file="map_after.html", selfcontained = TRUE)  # Saving the map as a HTML file for web use
+```
