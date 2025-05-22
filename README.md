@@ -1,2 +1,2 @@
 # automated-supply-redistribution
-Sustainability price at REWE Group Rethink Retail Hackathon
+Sustainability prize at REWE Group Rethink Retail Hackathon: improving supply redistribution across stores, optimized for parcel size.
